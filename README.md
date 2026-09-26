@@ -88,17 +88,21 @@ print([(g.name, g.prop.label, round(g.kv)) for g in match_propulsion(inp, dp).gr
 
 ## How it calculates
 
-SI units throughout. Symbols: $W = m_0 g$ weight, $S$ wing area, $b$ span,
-$A$ aspect ratio, $q=\tfrac12\rho V^2$ dynamic pressure, $\eta$ efficiencies.
+SI units throughout. Symbols: $`W = m_0 g`$ weight, $`S`$ wing area, $`b`$ span,
+$`A`$ aspect ratio, $`q=\tfrac12\rho V^2`$ dynamic pressure, $`\eta`$ efficiencies.
 Numbers in [brackets] refer to the sources at the bottom.
 
 ### 1. Atmosphere [1]
 
 International Standard Atmosphere (troposphere):
 
-$$T = 288.15 - 0.0065\,h,\qquad \rho = 1.225\,(1 - 2.25577\times10^{-5}\,h)^{4.2559}$$
+```math
+T = 288.15 - 0.0065\,h,\qquad \rho = 1.225\,(1 - 2.25577\times10^{-5}\,h)^{4.2559}
+```
 
-$$\mu = \frac{1.458\times10^{-6}\,T^{1.5}}{T + 110.4}\ \ \text{(Sutherland)},\qquad a = \sqrt{1.4\cdot 287.05\,T}$$
+```math
+\mu = \frac{1.458\times10^{-6}\,T^{1.5}}{T + 110.4}\ \ \text{(Sutherland)},\qquad a = \sqrt{1.4\cdot 287.05\,T}
+```
 
 Take-off/hover uses the field altitude, cruise and loiter the cruise altitude,
 the ceiling constraint the ceiling altitude.
@@ -108,60 +112,77 @@ the ceiling constraint the ceiling altitude.
 Winglets are counted as an effective aspect-ratio increase. This is Raymer's
 relation for end plates, a conservative estimate for winglets [2, Ch. 4]:
 
-$$A_\text{eff} = A\,(1 + 1.9\,h_w/b)$$
+```math
+A_{\text{eff}} = A\,(1 + 1.9\,h_w/b)
+```
 
 Oswald efficiency of the whole aircraft from Raymer's empirical fits
-[2, Ch. 12], using the geometric $A$:
+[2, Ch. 12], using the geometric $`A`$:
 
-$$e_\text{straight} = 1.78\,(1 - 0.045A^{0.68}) - 0.64,\qquad
-e_\text{swept} = 4.61\,(1 - 0.045A^{0.68})(\cos\Lambda_{LE})^{0.15} - 3.1$$
+```math
+e_{\text{straight}} = 1.78\,(1 - 0.045A^{0.68}) - 0.64,\qquad e_{\text{swept}} = 4.61\,(1 - 0.045A^{0.68})(\cos\Lambda_{LE})^{0.15} - 3.1
+```
 
-Raymer gives the swept-wing fit for $\Lambda_{LE} > 30°$ only. The tool uses
-$e_\text{straight}$ up to 25°, $e_\text{swept}$ above 35°, and blends linearly
+Raymer gives the swept-wing fit for $`\Lambda_{LE} > 30^\circ`$ only. The tool uses
+$`e_{\text{straight}}`$ up to 25°, $`e_{\text{swept}}`$ above 35°, and blends linearly
 in between.
 
-Cambered drag polar, with minimum drag $C_{D,min}$ at $C_{L,md}$ [2, Ch. 12; 3]:
+Cambered drag polar, with minimum drag $`C_{D,min}`$ at $`C_{L,md}`$ [2, Ch. 12; 3]:
 
-$$C_D = C_{D,min} + K_1 (C_L - C_{L,md})^2 = C_{D0} + K_1 C_L^2 + K_2 C_L$$
+```math
+C_D = C_{D,min} + K_1 (C_L - C_{L,md})^2 = C_{D0} + K_1 C_L^2 + K_2 C_L
+```
 
-$$K_1 = \frac{1}{\pi e A_\text{eff}},\quad K_2 = -2K_1 C_{L,md},\quad C_{D0} = C_{D,min} + K_1 C_{L,md}^2$$
+```math
+K_1 = \frac{1}{\pi e A_{\text{eff}}},\quad K_2 = -2K_1 C_{L,md},\quad C_{D0} = C_{D,min} + K_1 C_{L,md}^2
+```
 
-Best lift-to-drag ratio and minimum power follow from $d(C_L/C_D)/dC_L = 0$ and
-$d(C_D/C_L^{3/2})/dC_L = 0$:
+Best lift-to-drag ratio and minimum power follow from $`d(C_L/C_D)/dC_L = 0`$ and
+$`d(C_D/C_L^{3/2})/dC_L = 0`$:
 
-$$C_{L,(L/D)max} = \sqrt{C_{D0}/K_1},\qquad (L/D)_{max} = \frac{1}{2\sqrt{C_{D0}K_1} + K_2}$$
+```math
+C_{L,(L/D)max} = \sqrt{C_{D0}/K_1},\qquad (L/D)_{max} = \frac{1}{2\sqrt{C_{D0}K_1} + K_2}
+```
 
-$$C_{L,P_{min}} = \frac{K_2 + \sqrt{K_2^2 + 12 K_1 C_{D0}}}{2K_1}$$
+```math
+C_{L,P_{min}} = \frac{K_2 + \sqrt{K_2^2 + 12 K_1 C_{D0}}}{2K_1}
+```
 
-Reynolds number on the mean chord $c = S/b$: $\;Re = \rho V c / \mu$.
+Reynolds number on the mean chord $`c = S/b`$: $`Re = \rho V c / \mu`$.
 
 ### 3. Steady flight and constraints [2, Ch. 5 & 17; 3]
 
-Steady flight at speed $V$ and load factor $n$ (thrust equals drag):
+Steady flight at speed $`V`$ and load factor $`n`$ (thrust equals drag):
 
-$$C_L = \frac{n\,(W/S)}{q},\qquad \frac{T}{W} = \frac{q\,C_D(C_L)}{W/S}$$
+```math
+C_L = \frac{n\,(W/S)}{q},\qquad \frac{T}{W} = \frac{q\,C_D(C_L)}{W/S}
+```
 
-Level turn of radius $R$: $\;\tan\phi = V^2/(gR)$, $\;n = \sqrt{1 + (V^2/gR)^2}$.
+Level turn of radius $`R`$: $`\tan\phi = V^2/(gR)`$, $`n = \sqrt{1 + (V^2/gR)^2}`$.
 
-Stall speed and minimum operating speed (margin $m$, default 1.2):
+Stall speed and minimum operating speed (margin $`m`$, default 1.2):
 
-$$V_s = \sqrt{\frac{2\,(W/S)}{\rho\,C_{L,max}}},\qquad V \ge m\,V_s\sqrt{n}$$
+```math
+V_s = \sqrt{\frac{2\,(W/S)}{\rho\,C_{L,max}}},\qquad V \ge m\,V_s\sqrt{n}
+```
 
 Electrical power drawn from the battery per unit weight:
 
-$$\frac{P}{W} = \frac{(T/W)\,V}{\eta_p\,\eta_m\,\eta_{esc}}$$
+```math
+\frac{P}{W} = \frac{(T/W)\,V}{\eta_p\,\eta_m\,\eta_{esc}}
+```
 
-Each fixed-wing constraint is multiplied by the constraint margin $k$
+Each fixed-wing constraint is multiplied by the constraint margin $`k`$
 (default 1.2). The requirements:
 
 | Constraint | Model |
 |---|---|
-| Stall | $W/S \le \tfrac12\rho V_{s,max}^2 C_{L,max}$ (vertical line) |
-| Cruise-speed limit | cruise speed $\ge m V_s$: $\;W/S \le \tfrac12\rho V_{cr}^2 C_{L,max}/m^2$ |
-| Cruise, dash | $T/W$ at the required speed, $n = 1$ |
-| Climb, ceiling | at the minimum-power speed ($\ge mV_s$): $\;T/W = D/W + \text{ROC}/V$ (small climb angle). For a propeller aircraft, best rate of climb is near the minimum-power speed [2, Ch. 17] |
-| Loiter | minimum $P_{req}$ over $V \ge mV_s\sqrt n$, flown straight or as an orbit of radius $R$ |
-| Orbit limit | slowest possible circle, from $V^2 = m^2V_s^2 n$: $\;V^2 = \dfrac{m^2V_s^2}{\sqrt{1-(m^2V_s^2/gR)^2}}$, possible only while $W/S < \dfrac{gR\rho C_{L,max}}{2m^2}$ |
+| Stall | $`W/S \le \tfrac12\rho V_{s,max}^2 C_{L,max}`$ (vertical line) |
+| Cruise-speed limit | cruise speed $`\ge m V_s`$: $`W/S \le \tfrac12\rho V_{cr}^2 C_{L,max}/m^2`$ |
+| Cruise, dash | $`T/W`$ at the required speed, $`n = 1`$ |
+| Climb, ceiling | at the minimum-power speed ($`\ge mV_s`$): $`T/W = D/W + \text{ROC}/V`$ (small climb angle). For a propeller aircraft, best rate of climb is near the minimum-power speed [2, Ch. 17] |
+| Loiter | minimum $`P_{req}`$ over $`V \ge mV_s\sqrt n`$, flown straight or as an orbit of radius $`R`$ |
+| Orbit limit | slowest possible circle, from $`V^2 = m^2V_s^2 n`$: $`V^2 = \dfrac{m^2V_s^2}{\sqrt{1-(m^2V_s^2/gR)^2}}`$, possible only while $`W/S < \dfrac{gR\rho C_{L,max}}{2m^2}`$ |
 | Hover | see §4 |
 
 Minimum-power speeds are found numerically (a speed grid from the minimum
@@ -172,97 +193,111 @@ carry their share of hover.
 
 ### 4. Hover [4]
 
-Momentum (actuator-disk) theory with a figure of merit $FM$. Each of the $N$
+Momentum (actuator-disk) theory with a figure of merit $`FM`$. Each of the $`N`$
 rotors carries an equal share of the thrust:
 
-$$T_i = \frac{(T/W)_h\,W}{N},\qquad P_i = \frac{T_i^{3/2}}{FM\,\sqrt{2\rho A_i}\;\eta_m\eta_{esc}},\qquad A_i = \frac{\pi D_i^2}{4}$$
+```math
+T_i = \frac{(T/W)_h\,W}{N},\qquad P_i = \frac{T_i^{3/2}}{FM\,\sqrt{2\rho A_i}\;\eta_m\eta_{esc}},\qquad A_i = \frac{\pi D_i^2}{4}
+```
 
-$(T/W)_h$ is the hover thrust margin for motor sizing. Hover energy uses $(T/W)_h = 1$.
-With unequal rotor sizes, the tilting rotors carry $n_t/N$ of the thrust and
-$\sum_\text{tilt} D_i^{-1} / \sum_\text{all} D_i^{-1}$ of the power.
+$`(T/W)_h`$ is the hover thrust margin for motor sizing. Hover energy uses $`(T/W)_h = 1`$.
+With unequal rotor sizes, the tilting rotors carry $`n_t/N`$ of the thrust and
+$`\sum_{\text{tilt}} D_i^{-1} / \sum_{\text{all}} D_i^{-1}`$ of the power.
 
 ### 5. Motor power
 
 | Group | Electrical power per motor |
 |---|---|
-| Tilting motor | $\max\!\left((P/W)_{design}\,W/n_t,\ P_{i,hover}\right)$ |
-| Lift-only motor | $P_{i,hover}$ at $(T/W)_h$ |
-| Cruise motor | $(P/W)_{design}\,W$ |
+| Tilting motor | $`\max\!\left((P/W)_{design}\,W/n_t,\ P_{i,hover}\right)`$ |
+| Lift-only motor | $`P_{i,hover}`$ at $`(T/W)_h`$ |
+| Cruise motor | $`(P/W)_{design}\,W`$ |
 
 ### 6. Mission energy and battery [2, electric-aircraft chapter; 5]
 
 Energy is summed over the legs, each at its own electrical power:
 
-$$E = (1 + r)\Big[P_{hover}t_{hover} + P_{climb}\tfrac{\Delta h}{\text{ROC}} + P_{cruise}\tfrac{d}{V_{cr}} + P_{loiter}t_{loiter} + P_{sys}\,t_{flight}\Big]$$
+```math
+E = (1 + r)\Big[P_{hover}t_{hover} + P_{climb}\tfrac{\Delta h}{\text{ROC}} + P_{cruise}\tfrac{d}{V_{cr}} + P_{loiter}t_{loiter} + P_{sys}\,t_{flight}\Big]
+```
 
-$r$ is the energy reserve, and $P_{sys}$ is the avionics and payload power over the whole
-flight. The battery mass uses the pack specific energy $e_b$ and usable depth
+$`r`$ is the energy reserve, and $`P_{sys}`$ is the avionics and payload power over the whole
+flight. The battery mass uses the pack specific energy $`e_b`$ and usable depth
 of discharge:
 
-$$m_b = \frac{E}{e_b \cdot DoD}$$
+```math
+m_b = \frac{E}{e_b \cdot DoD}
+```
 
 ### 7. Mass sizing [2, Ch. 3]
 
 Take-off mass closes the mass balance:
 
-$$m_0 = \frac{m_{payload}}{1 - m_e/m_0 - m_b/m_0}$$
+```math
+m_0 = \frac{m_{payload}}{1 - m_e/m_0 - m_b/m_0}
+```
 
-This is solved as a root of $F(m_0) = m_0 - m_e - m_b - m_{payload}$: a log-spaced
+This is solved as a root of $`F(m_0) = m_0 - m_e - m_b - m_{payload}`$: a log-spaced
 scan finds the first sign change (the lightest aircraft that closes), then
 bisection refines it. A plain fixed-point iteration is avoided because it
 diverges when fixed masses are large compared with the payload. The empty mass
-$m_e$ (everything except battery and payload) comes from one of two models:
+$`m_e`$ (everything except battery and payload) comes from one of two models:
 
-- **Regression** [2, Ch. 3]: $\;m_e/m_0 = A\,m_0^{C}$ (plus an optional wing mass $\rho_A S$).
-- **Component build-up**:
-  $$m_e = \rho_A S + f_{fus}\,m_0 + \frac{P_{installed}}{p_{motor}} + m_{prop}N_{props} + m_{tilt}N_{tilt} + m_{avionics}$$
-  $\rho_A$ is wing mass per area, $f_{fus}$ the fuselage/tail/gear fraction,
-  and $p_{motor}$ the motor + ESC specific power (kW/kg). Every term is an
-  input; the defaults are engineering estimates for this class and should be
-  calibrated against a real aircraft.
+- **Regression** [2, Ch. 3]: $`m_e/m_0 = A\,m_0^{C}`$ (plus an optional wing mass $`\rho_A S`$).
+- **Component build-up** (below): $`\rho_A`$ is wing mass per area, $`f_{fus}`$ the
+  fuselage/tail/gear fraction, and $`p_{motor}`$ the motor + ESC specific power (kW/kg).
+  Every term is an input; the defaults are engineering estimates for this class and
+  should be calibrated against a real aircraft.
 
-Geometry follows from the design point: $S = W/(W/S)$, $b = \sqrt{A S}$, $c = S/b$.
+```math
+m_e = \rho_A S + f_{fus}\,m_0 + \frac{P_{installed}}{p_{motor}} + m_{prop}N_{props} + m_{tilt}N_{tilt} + m_{avionics}
+```
+
+Geometry follows from the design point: $`S = W/(W/S)`$, $`b = \sqrt{A S}`$, $`c = S/b`$.
 The *Min-MTOW point* searches the feasible W/S range on a grid and refines around the minimum.
 
 ### 8. Propellers [6, 7, 8]
 
-Standard propeller coefficients ($n$ in rev/s, $D$ in m):
+Standard propeller coefficients ($`n`$ in rev/s, $`D`$ in m):
 
-$$J = \frac{V}{nD},\quad C_T = \frac{T}{\rho n^2 D^4},\quad C_P = \frac{P}{\rho n^3 D^5},\quad \eta_p = \frac{C_T J}{C_P},\quad FM = \sqrt{\tfrac{2}{\pi}}\,\frac{C_T^{3/2}}{C_P}\ \ (J=0)$$
+```math
+J = \frac{V}{nD},\quad C_T = \frac{T}{\rho n^2 D^4},\quad C_P = \frac{P}{\rho n^3 D^5},\quad \eta_p = \frac{C_T J}{C_P},\quad FM = \sqrt{\tfrac{2}{\pi}}\,\frac{C_T^{3/2}}{C_P}\ \ (J=0)
+```
 
 For each flight condition, the RPM that gives the required thrust is found by
-bisection on $C_T(J,\text{RPM})\,\rho n^2 D^4 = T$. Then:
+bisection on $`C_T(J,\text{RPM})\,\rho n^2 D^4 = T`$. Then:
 
-$$P_{shaft} = C_P\rho n^3D^5,\quad P_{elec} = \frac{P_{shaft}}{\eta_m\eta_{esc}},\quad Q = \frac{P_{shaft}}{2\pi n},\quad M_{tip} = \frac{\pi D n}{a}$$
+```math
+P_{shaft} = C_P\rho n^3D^5,\quad P_{elec} = \frac{P_{shaft}}{\eta_m\eta_{esc}},\quad Q = \frac{P_{shaft}}{2\pi n},\quad M_{tip} = \frac{\pi D n}{a}
+```
 
-**Data**: $C_T$ and $C_P$ come from the UIUC wind-tunnel measurements [7, 8]
+**Data**: $`C_T`$ and $`C_P`$ come from the UIUC wind-tunnel measurements [7, 8]
 wherever they cover the point. Otherwise they come from APC's computed data [9]. Past the
 end of the measured range, the computed data is scaled to meet the measured
-curve and the correction fades out over $\Delta J = 0.15$. UIUC runs at nearly
+curve and the correction fades out over $`\Delta J = 0.15`$. UIUC runs at nearly
 the same RPM are merged. Every result shows the source it used.
 
-**Limits**: APC's maximum RPM for Thin Electric props is $150\,000 / D_{[in]}$ [10].
+**Limits**: APC's maximum RPM for Thin Electric props is $`150\,000 / D_{\text{in}}`$ [10].
 
 **Mission averages** fed back to the sizing: the energy-weighted forward
-efficiency $\eta_p = \sum T V t / \sum P_{shaft} t$, and the hover figure of merit.
+efficiency $`\eta_p = \sum T V t / \sum P_{shaft} t`$, and the hover figure of merit.
 
 **Generic prop** (only when no data prop is chosen): linear thrust line
-$C_T = C_{T0}(1 - J/J_0)$ with $C_{T0} = 0.07 + 0.08\,P/D$ and $J_0 = 1.1\,P/D$.
-These are rough fits; power uses the sizing's $FM$ and $\eta_p$.
+$`C_T = C_{T0}(1 - J/J_0)`$ with $`C_{T0} = 0.07 + 0.08\,P/D`$ and $`J_0 = 1.1\,P/D`$.
+These are rough fits; power uses the sizing's $`FM`$ and $`\eta_p`$.
 
 ### 9. Motor and battery matching
 
 These are rules of thumb, not published models:
 
 - Kv puts the highest required RPM at about 90 % throttle, with a loaded motor
-  turning about 80 % of Kv × V: $\;K_v = \text{RPM}_{max} / (0.72\,V_{pack})$.
-- Pack voltage $V_{pack} = N_S \cdot V_{cell}$. Current is computed at 93 % of nominal voltage
-  (sag): $\;I = P_{elec}/(0.93\,V_{pack})$.
-- Capacity $= E_{battery}/V_{pack}$. Required C-rating $= I_{peak}/\text{capacity}$,
-  where $I_{peak}$ is the worst of all hover motors at maximum thrust, dash, and climb.
+  turning about 80 % of Kv × V: $`K_v = \text{RPM}_{max} / (0.72\,V_{pack})`$.
+- Pack voltage $`V_{pack} = N_S \cdot V_{cell}`$. Current is computed at 93 % of nominal voltage
+  (sag): $`I = P_{elec}/(0.93\,V_{pack})`$.
+- Capacity $`= E_{battery}/V_{pack}`$. Required C-rating $`= I_{peak}/\text{capacity}`$,
+  where $`I_{peak}`$ is the worst of all hover motors at maximum thrust, dash, and climb.
 - Static thrust at full throttle is the smaller of the RPM-limited thrust
-  and the power-limited thrust $\big(P\,\eta_m\eta_{esc}\,FM\sqrt{2\rho A}\big)^{2/3}$.
-- Top speed is where thrust available ($\min$ of the RPM limit and $\eta_p P / V$)
+  and the power-limited thrust $`\big(P\,\eta_m\eta_{esc}\,FM\sqrt{2\rho A}\big)^{2/3}`$.
+- Top speed is where thrust available ($`\min`$ of the RPM limit and $`\eta_p P / V`$)
   meets drag.
 
 Confirm motor choices with the manufacturer's data or a tool such as eCalc,
@@ -271,8 +306,8 @@ and compare the torque column with the motor's rated torque.
 ## Not modelled
 
 Transition aerodynamics and transition energy (add it to hover time); trim
-drag; the drag of stopped lift rotors and booms (include them in $C_{D,min}$);
-wing Reynolds-number effects on $C_{L,max}$ and $C_{D,min}$ (use low-Re airfoil
+drag; the drag of stopped lift rotors and booms (include them in $`C_{D,min}`$);
+wing Reynolds-number effects on $`C_{L,max}`$ and $`C_{D,min}`$ (use low-Re airfoil
 data); structures and loads; stability, control and CG; wind; battery
 temperature and ageing beyond the usable-DoD factor.
 
