@@ -97,7 +97,7 @@ FIELDS = [
          "Separate cruise prop (quadplane / conventional only)."),
     ]),
     ("Weights", [
-        ("mtow_guess", "MTOW initial guess", "kg", 0.1, 500, 0.5, 2, "Starting point of the sizing loop."),
+        ("mtow_guess", "MTOW rough guess", "kg", 0.1, 500, 0.5, 2, "Only used for the first constraint pass (hover line) before sizing."),
     ]),
     ("Empty weight: components", [
         ("comp_wing_areal", "Wing areal mass", "kg/m²", 0.1, 20, 0.1, 2,
@@ -518,7 +518,7 @@ class MainWindow(QMainWindow):
         ax.clear()
         ax.set_facecolor("#FAFBFC")
         ax.grid(color="#DDE3EC", linewidth=0.7, linestyle="--")
-        ax.set_title(f"Thrust available vs required ({ch['group']}s, cruise altitude)",
+        ax.set_title(f"Thrust available vs required\n{ch['group']}s, cruise altitude",
                      fontsize=10, fontweight="semibold", color="#1A2A3A")
         ax.plot(ch["V"], ch["drag"], color=C_ENV, lw=2.2, label="Required (drag, level flight)")
         ax.plot(ch["V"], ch["t_avail"], color="#E07B39", lw=2.2, label="Available (full throttle)")
@@ -526,11 +526,14 @@ class MainWindow(QMainWindow):
         ax.plot(ch["V"], ch["t_power"], color="#E07B39", lw=1, ls="--", label="Power limit")
         dmax = np.nanmax(ch["drag"])
         ax.set_ylim(0, 1.2 * max(dmax, min(np.nanmax(ch["t_avail"]), 3 * dmax)))
-        for v, lbl, col in ((ch["v_min"], "Min", "#D62828"), (ch["v_cruise"], "Cruise", "#6B8CBA"),
-                            (ch["v_max"], "Dash", "#3B4FA0"), (ch["v_top"], "Top speed", "#2BA57A")):
+        marks = ((ch["v_min"], "Min", "#D62828"), (ch["v_cruise"], "Cruise", "#6B8CBA"),
+                 (ch["v_max"], "Dash", "#3B4FA0"), (ch["v_top"], "Top speed", "#2BA57A"))
+        for i, (v, lbl, col) in enumerate(marks):
             if math.isfinite(v):
                 ax.axvline(v, color=col, lw=1, ls="-.")
-                ax.text(v, ax.get_ylim()[1] * 0.98, f" {lbl}\n {v:.1f}", color=col, fontsize=8, va="top")
+                # alternate heights so labels of nearby speeds don't overlap
+                y = ax.get_ylim()[1] * (0.98 if i % 2 == 0 else 0.86)
+                ax.text(v, y, f" {lbl}\n {v:.1f}", color=col, fontsize=8, va="top")
         ax.set_xlabel("Airspeed  [m/s]", color="#444")
         ax.set_ylabel("Thrust  [N]", color="#444")
         ax.legend(fontsize=8, loc="center right")

@@ -35,7 +35,7 @@ def air_viscosity(h):
 class Inputs:
     # Weights
     payload_mass: float = 0.9          # kg
-    mtow_guess: float = 5.0            # kg, starting point of the sizing loop
+    mtow_guess: float = 5.0            # kg, rough guess for the first constraint pass
     empty_model: str = "components"    # "components" | "regression"
     # regression model: everything except battery and payload
     empty_A: float = 0.699             # We/W0 = A * W0^C  (W0 in kg)
@@ -510,40 +510,57 @@ def empty_mass(inp: Inputs, m0: float, ws: float, groups) -> dict:
 
 
 def size_aircraft(inp: Inputs, ws: float, pw: float | None = None,
-                  tol=1e-6, max_iter=300) -> Sizing:
+                  tol=1e-6, m_max=1000.0) -> Sizing:
     """
-    Converge take-off mass for a chosen wing loading (and optionally P/W):
-        m0 = m_payload / (1 - We/W0 - Wb/W0)
-    Empty mass comes from the regression or the component model (which needs
-    the installed motor power); the battery fraction is recomputed every
-    iteration from the mission energy (depends on W/S and, for hover, on W).
+    Take-off mass for a chosen wing loading (and optionally P/W): the lightest
+    m0 that closes the mass balance
+        F(m0) = m0 - m_empty(m0) - m_battery(m0) - m_payload = 0
+    (equivalently m0 = m_payload / (1 - We/W0 - Wb/W0)). Empty mass comes from
+    the regression or the component model (which needs the installed motor
+    power); battery mass from the mission energy, which depends on W/S and,
+    through hover, on W. F is scanned on a log grid for its first sign change
+    and the root refined by bisection. A plain fixed-point iteration is not
+    used: it diverges when fixed masses are large compared with the payload.
     """
     ae = aero_model(inp)
-    m0 = inp.mtow_guess
     e_spec = inp.battery_wh_per_kg * 3600.0 * inp.battery_dod  # usable J/kg
-    for _ in range(max_iter):
+
+    def residual(m0):
         W = m0 * G
-        legs, lo = mission_energy_per_weight(inp, ae, ws, W)
+        legs, _ = mission_energy_per_weight(inp, ae, ws, W)
         groups = motor_sizing(inp, ae, ws, W, pw)[0]
         if not all(math.isfinite(v) for v in legs.values()) or not all(
                 math.isfinite(p) for _, _, p in groups):
+            return None
+        m_b = G * sum(legs.values()) * (1.0 + inp.energy_reserve) / e_spec * m0
+        m_e = sum(empty_mass(inp, m0, ws, groups).values())
+        return m0 - m_e - m_b - inp.payload_mass
+
+    grid = np.geomspace(inp.payload_mass * 1.001, max(m_max, 10 * inp.payload_mass), 40)
+    prev_m, prev_f, lo = None, None, None
+    for m in grid:
+        f = residual(float(m))
+        if f is None:
             return Sizing(False, "Mission cannot be flown at this wing loading "
                                  "(a required speed or orbit is below the stall margin).")
-        e_per_w = sum(legs.values()) * (1.0 + inp.energy_reserve)
-        f_b = G * e_per_w / e_spec
-        f_e = sum(empty_mass(inp, m0, ws, groups).values()) / m0
-        denom = 1.0 - f_e - f_b
-        if denom <= 0.02:
-            return Sizing(False, f"Sizing does not close: empty ({f_e:.2f}) + battery "
-                                 f"({f_b:.2f}) fractions leave no room for payload.",
-                          empty_fraction=f_e, battery_fraction=f_b)
-        m_new = inp.payload_mass / denom
-        if abs(m_new - m0) < tol * m0:
-            m0 = m_new
+        if prev_f is not None and prev_f < 0 <= f:
+            lo = (prev_m, float(m))
             break
-        m0 = 0.5 * m0 + 0.5 * m_new
-    else:
-        return Sizing(False, "Sizing loop did not converge.")
+        prev_m, prev_f = float(m), f
+    if lo is None:
+        return Sizing(False, "Sizing does not close: empty + battery mass exceed the take-off "
+                             f"mass at every mass up to {grid[-1]:.0f} kg.")
+    a, b = lo
+    for _ in range(100):
+        mid = 0.5 * (a + b)
+        f_mid = residual(mid)
+        if f_mid is not None and f_mid < 0:
+            a = mid
+        else:
+            b = mid
+        if b - a < tol * b:
+            break
+    m0 = b
 
     W = m0 * G
     legs, lo = mission_energy_per_weight(inp, ae, ws, W)

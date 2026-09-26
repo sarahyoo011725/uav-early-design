@@ -207,7 +207,10 @@ Take-off mass closes the mass balance:
 
 $$m_0 = \frac{m_{payload}}{1 - m_e/m_0 - m_b/m_0}$$
 
-This is solved by fixed-point iteration with 50 % relaxation. The empty mass
+This is solved as a root of $F(m_0) = m_0 - m_e - m_b - m_{payload}$: a log-spaced
+scan finds the first sign change (the lightest aircraft that closes), then
+bisection refines it. A plain fixed-point iteration is avoided because it
+diverges when fixed masses are large compared with the payload. The empty mass
 $m_e$ (everything except battery and payload) comes from one of two models:
 
 - **Regression** [2, Ch. 3]: $\;m_e/m_0 = A\,m_0^{C}$ (plus an optional wing mass $\rho_A S$).
