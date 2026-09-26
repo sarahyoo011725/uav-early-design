@@ -1,0 +1,32 @@
+# Virtual environment
+venv/
+.venv/
+env/
+
+# Python bytecode and caches
+__pycache__/
+*.py[cod]
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+
+# Packaging / build output
+build/
+dist/
+*.egg-info/
+
+# Editors and OS files
+.vscode/
+.idea/
+*.swp
+.DS_Store
+Thumbs.db
+desktop.ini
+
+# Files exported from the app (File menu, trade study)
+constraint_diagram*.png
+uav_design_report*.html
+trade_study*.csv
+
+# Saved inputs are small JSON files you may want to keep: they are NOT ignored.
+# data/ (propeller performance data) is needed at runtime and is NOT ignored.
